@@ -1,11 +1,11 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 import sys
 import os
 import os.path
 
-from Hotpep.hotpep_data import hotpep_data_path
+FILE_DIRNAME = os.path.dirname(os.path.realpath(__file__))
 
-protein_collection = hotpep_data_path("fungus_fungus/Chaetomium_thermophilum")
+protein_collection = os.path.join(FILE_DIRNAME, "fungus_fungus", "Chaetomium_thermophilum")
 if len(sys.argv) > 1:
 	protein_collection = sys.argv[1].replace("?", " ")
 cazyme_array = ["AAexp"]

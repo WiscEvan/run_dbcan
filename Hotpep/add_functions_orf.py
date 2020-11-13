@@ -1,29 +1,32 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 import sys
 import os
 import os.path
 from subprocess import call
 import natsort
 
-from Hotpep.hotpep_data import hotpep_data_path
+FILE_DIRNAME = os.path.dirname(os.path.realpath(__file__))
 
-protein_dir_name = hotpep_data_path("fungus_fungus")
+fungus_dirpath = os.path.join(FILE_DIRNAME, "fungus_fungus")
 if len(sys.argv) > 1:
-	protein_dir_name = sys.argv[1].replace("?", " ")
+	fungus_dirpath = sys.argv[1].replace("?", " ")
 function_significance_limit = 2 #Normally 2 for new patterns (no proteins with this function in group) and 10 for old patterns (sum freq conserved peptides for function in group ) 
-score_file = "_group_ec"
 
-peptide_dir_name = hotpep_data_path("CAZY_PPR_patterns/GH")
+
+peptide_dir_name = os.path.join(FILE_DIRNAME, "CAZY_PPR_patterns", "GH")
 if len(sys.argv) > 2:
 	peptide_dir_name = sys.argv[2].replace("?", " ")
 	
 
 fam_group_score_hash = {}
-with open(peptide_dir_name+"/fam_list.txt", 'r') as f: ####
+fam_list_filepath = os.path.join(peptide_dir_name, "fam_list.txt")
+with open(fam_list_filepath, 'r') as f: ####
 	for line in f:
 		fam = line.rstrip()
 		try:
-			with open(peptide_dir_name+"/"+fam+"/"+fam+score_file+".txt", 'r') as f2:
+			score_filename = "{}_group_ec.txt".format(fam)
+			score_filepath = os.path.join(peptide_dir_name, fam, score_filename)
+			with open(score_filepath, 'r') as f2:
 				group_func_hash = {}
 				for row in f2:
 					row = row.rstrip()
@@ -33,8 +36,9 @@ with open(peptide_dir_name+"/fam_list.txt", 'r') as f: ####
 			fam_group_score_hash[fam] = group_func_hash
 		except:
 			pass
-			
-output_dir_name = protein_dir_name+"/"+peptide_dir_name.split("/")[-1]+"/functions"
+
+peptide = os.path.basename(peptide_dir_name)
+output_dir_name = os.path.join(fungus_dirpath, peptide, "functions")
 if not os.path.exists(output_dir_name):
 	call(["mkdir", output_dir_name])
 
@@ -59,12 +63,15 @@ class Protein():
 		
 function_summary_hash = {}
 protein_array = []
-with open(protein_dir_name+"/"+peptide_dir_name.split("/")[-1]+"/summary.txt", 'r') as f:
+summary_filepath = os.path.join(fungus_dirpath, peptide, "summary.txt")
+with open(summary_filepath, 'r') as f:
 	next(f)
 	for line in f:
 		line = line.rstrip()
 		if int(line.split("\t")[1]) > 0:
-			with open(protein_dir_name+"/"+peptide_dir_name.split("/")[-1]+"/"+line.split("\t")[0]+".txt", 'r') as f2:
+			filename = line.split("\t")[0]+".txt"
+			infilepath = os.path.join(fungus_dirpath, peptide, filename)
+			with open(infilepath, 'r') as f2:
 				next(f2)
 				p_old = Protein("load")
 				p_old.neighbor_seqs = []
@@ -104,13 +111,13 @@ def sort_order(protein):
 if len(protein_array) > 0:
 	protein_array.sort(key=sort_order)
 	function = protein_array[0].function
-	out = open(protein_dir_name+"/"+peptide_dir_name.split("/")[-1]+"/functions/"+function.replace(".","_")+".txt", 'w')
+	out = open(fungus_dirpath+"/"+peptide_dir_name.split("/")[-1]+"/functions/"+function.replace(".","_")+".txt", 'w')
 	out.write("fam\tgroup\tFunctions\tseq_no\tORF freq\tORF hits\tsequence\tlength\tpeptides\tFrequency\thits\tDNA\n")
 	for p in protein_array:
 		if p.function != function:
 			function = p.function
 			out.close()
-			out = open(protein_dir_name+"/"+peptide_dir_name.split("/")[-1]+"/functions/"+function.replace(".","_")+".txt", 'w')
+			out = open(fungus_dirpath+"/"+peptide_dir_name.split("/")[-1]+"/functions/"+function.replace(".","_")+".txt", 'w')
 			out.write("fam\tgroup\tFunctions\tseq_no\tORF freq\tORF hits\tsequence\tlength\tpeptides\tFrequency\thits\tDNA\n")
 		out.write(p.fam+'\t'+str(p.group)+'\t'+",".join(p.functions_array)+'\t'+p.name.split("|")[0]+'\t'+str(p.orf_freq).replace(".",",")+'\t'+str(p.orf_hits)+'\t'+p.seq+'\t'+str(len(p.seq))+'\t'+p.peptides+'\t'+str(p.freq).replace(".",",")+'\t'+str(p.hits)+'\t'+str(p.dna)+'\n')
 		if len(p.neighbor_seqs) > 0:
@@ -127,7 +134,7 @@ if len(protein_array) > 0:
 			function_hash[function] = array
 		else:
 			function_hash[function].append(p.fam)
-	out = open(protein_dir_name+"/"+peptide_dir_name.split("/")[-1]+"/functions/summary.txt", 'w')
+	out = open(fungus_dirpath+"/"+peptide_dir_name.split("/")[-1]+"/functions/summary.txt", 'w')
 	out.write("EC number\thits\tfamily distribution")
 	#array = sorted(function_hash, key=lambda x: (x[0].replace(".","").replace("x","0")))
 	array = function_hash

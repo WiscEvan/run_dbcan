@@ -21,13 +21,17 @@ import os
 import argparse
 import sys
 
+SRC_DIR = os.path.dirname(os.path.realpath(__file__))
+HMMSCAN_PARSER = os.path.join(SRC_DIR, "hmmscan-parser.py")
+
 '''
 def some functions
 '''
+
 def runHmmScan(outPath, hmm_cpu, dbDir, hmm_eval, hmm_cov, db_name):
     hmmer = Popen(['hmmscan', '--domtblout', '%sh%s.out' % (outPath, db_name), '--cpu', hmm_cpu, '-o', '/dev/null', '%s%s.hmm' % (dbDir,db_name), '%suniInput' % outPath])
     hmmer.wait()
-    call('hmmscan-parser.py %sh%s.out %s %s > %s%s.out'%(outPath, db_name, hmm_eval, hmm_cov, outPath, db_name), shell=True)
+    call('%s %sh%s.out %s %s > %s%s.out'%(HMMSCAN_PARSER, outPath, db_name, hmm_eval, hmm_cov, outPath, db_name), shell=True)
     if os.path.exists('%sh%s.out' % (outPath, db_name)):
         call(['rm', '%sh%s.out' % (outPath, db_name)])
 
@@ -98,12 +102,14 @@ if not os.path.isdir(dbDir):
     print(dbDir , "ERROR: The database directory does not exist")
     exit()
 
-if not os.path.isfile(dbDir+'CAZy.dmnd'):
+cazy_dmnd = os.path.join(dbDir, 'CAZy.dmnd')
+if not os.path.isfile(cazy_dmnd):
     print("ERROR: No CAZy DIAMOND database found. \
     Please make sure that your CAZy DIAMOND databased is named 'CAZy.dmnd' and is located in your database directory")
     exit()
 
-if not os.path.isfile(dbDir + args.dbCANFile):
+dbcan_file = os.path.join(dbDir, args.dbCANFile)
+if not os.path.isfile(dbcan_file):
     print("ERROR: No dbCAN HMM database found. \
     Please make sure that your dbCAN HMM database is named 'dbCAN-HMMdb-V8.txt' or the newest one, has been through hmmpress, and is located in your database directory")
     exit()
@@ -135,12 +141,12 @@ if args.tools != 'all':
 #########################
 # Begin Gene Prediction Tools
 if inputType == 'prok':
-    call(['prodigal', '-i', inputFile, '-a', '%suniInput'%outPath, '-o', '%sprodigal.gff'%outPath, '-f', 'gff', '-q'])
+    call(['prodigal', '-i', inputFile, '-a', '{}uniInput'.format(outPath), '-o', '{}prodigal.gff'.format(outPath), '-f', 'gff', '-q'])
 if inputType == 'meta':
-    call(['prodigal', '-i', inputFile, '-a', '%suniInput'%outPath, '-o', '%sprodigal.gff'%outPath, '-f', 'gff', '-p', 'meta','-q'])
+    call(['prodigal', '-i', inputFile, '-a', '{}uniInput'.format(outPath), '-o', '{}prodigal.gff'.format(outPath), '-f', 'gff', '-p', 'meta','-q'])
 #Proteome
 if inputType == 'protein':
-    call(['cp', inputFile, '%suniInput'%outPath])
+    call(['cp', inputFile, '{}uniInput'.format(outPath)])
 
 # End Gene Prediction Tools
 #######################
@@ -165,23 +171,24 @@ if tools[0]:
 
 if tools[1]:
     print("\n\n***************************2. HMMER start*************************************************\n\n")
-    os.system(f"hmmscan --domtblout {outPath}h.out --cpu {args.hmm_cpu} -o /dev/null {dbDir}{args.dbCANFile} {outPath}uniInput ")
+    os.system("hmmscan --domtblout {outpath}h.out --cpu {cpu} -o /dev/null {outfile} {outpath}uniInput ".format(outpath=outPath, cpu=args.hmm_cpu, outfile=os.path.join(dbDir, args.dbCANFile)))
     print("\n\n***************************2. HMMER end***************************************************\n\n")
-    call(f"hmmscan-parser.py {outPath}h.out {str(args.hmm_eval)} {str(args.hmm_cov)} > {outPath}hmmer.out", shell=True)
-    if os.path.exists(f"{outPath}h.out"):
-        call(['rm', f"{outPath}h.out"])
+    call("{script} {outpath}h.out {hmm_eval} {hmm_cov} > {outpath}hmmer.out".format(script=HMMSCAN_PARSER, outpath=outPath, hmm_eval=args.hmm_eval, hmm_cov=args.hmm_cov), shell=True)
+    if os.path.exists("{}h.out".format(outPath)):
+        os.remove("{}h.out".format(outPath))
 
 if tools[2]:
-    count = int(check_output(f"tr -cd '>' < {outPath}uniInput | wc -c" , shell=True))    #number of genes in input file
+    count = int(check_output("tr -cd '>' < {}uniInput | wc -c".format(outPath) , shell=True))    #number of genes in input file
     numThreads = args.hotpep_cpu if count >= args.hotpep_cpu else count   #number of cores for Hotpep to use, revised by Le Huang 12/17/2018
     count_per_file = count / numThreads      #number of genes per core
     directory = "input_" + str(os.getpid())
-    if not os.path.exists(f"Hotpep/{directory}"):
-        os.makedirs(f"Hotpep/{directory}")
+    if not os.path.exists("Hotpep/{}".format(directory)):
+        os.makedirs("Hotpep/{}".format(directory))
     num_files = 1
     num_genes = 0
-    out = open(f"Hotpep/{directory}/orfs{str(num_files)}.txt", "w")
-    with open(f"{outPath}uniInput", "r") as f:
+    outfpath = "Hotpep/{outdir}/orfs{n_files}.txt".format(outdir=directory, n_files=num_files)
+    out = open(outfpath, "w")
+    with open("{}uniInput".format(outPath), "r") as f:
         for line in f:
             if line.startswith(">"):
                 num_genes += 1
@@ -189,21 +196,23 @@ if tools[2]:
                     out.close()
                     num_files += 1
                     num_genes = 0
-                    out = open(f"Hotpep/{directory}/orfs{str(num_files)}.txt", "w")
+                    out = open(outfpath, "w")
             out.write(line)
     out.close()
     os.chdir("Hotpep/")
     print("\n\n***************************3. HotPep start***************************************************\n\n")
-    os.system(f"train_many_organisms_many_families.py {directory} {numThreads} {args.hotpep_hits} {args.hotpep_freq}")
+    train_script = os.path.join(SRC_DIR, "Hotpep","train_many_organisms_many_families.py")
+    os.system("{script} {inputdir} {threads} {hits} {freq}".format(script=train_script, inputdir=directory, threads=numThreads, hits=args.hotpep_hits, freq=args.hotpep_freq))
     os.chdir('../')
     print("\n\n***************************3. hotPep end***************************************************\n\n")
-    os.system(f"cp Hotpep/{directory}/Results/output.txt {outPath}Hotpep.out")
-    os.system(f"rm -r Hotpep/{directory}")
+    os.system("cp Hotpep/{outdir}/Results/output.txt {outpath}Hotpep.out".format(outdir=directory, outpath=outPath))
+    os.system("rm -r Hotpep/{outdir}".format(outdir=directory))
 
 # End Core Tools
 ########################
 # Begin Adding Column Headers
 
+# Hotpep run
 if tools[2]:
     with open(outPath+'Hotpep.out') as f:
         with open(outPath+'temp', 'w') as out:

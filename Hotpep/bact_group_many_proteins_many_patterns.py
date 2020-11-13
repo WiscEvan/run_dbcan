@@ -1,14 +1,14 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 import sys
 import re
 import itertools
 import os
 from subprocess import call
 
-from Hotpep.hotpep_data import hotpep_data_path
+FILE_DIRNAME = os.path.dirname(os.path.realpath(__file__))
 
-protein_dir_name = hotpep_data_path("fungus_fungus")
-peptide_dir_name = hotpep_data_path("CAZY_PPR_patterns/GH")
+protein_dir_name = os.path.join(FILE_DIRNAME, "fungus_fungus")
+peptide_dir_name = os.path.join(FILE_DIRNAME, "CAZY_PPR_patterns", "GH")
 thread_no = 1
 peptide_length = 6 #length of conserved peptides
 hit_cut_off = 3 #number of conserved peptides necessary to classify a protein
@@ -28,7 +28,8 @@ if argc > 5:
 	hit_cut_off = int(sys.argv[5])
 if argc > 6:
 	freq_cut_off = float(sys.argv[6])
-outf_name = protein_dir_name+"/thread"+str(thread_no)+".txt"
+
+outf_name = os.path.join(protein_dir_name, "thread{}.txt".format(thread_no))
 
 class Protein:
 	def __init__(self, sequ):

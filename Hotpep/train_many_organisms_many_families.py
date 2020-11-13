@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 #Runs parallel_group_many_proteins_many_patterns.rb for many organisms and types of proteins
 #####################################
 ##Revised by Le Huang on 12/24/2018##
@@ -7,8 +7,6 @@ from subprocess import call
 import os
 import os.path
 import sys
-
-from Hotpep.hotpep_data import hotpep_data_path
 
 ###
 #train_many_organisms_many_families.py [inputFolder] [threads] [hits] [freq]
@@ -42,13 +40,18 @@ if os.path.exists(organism_array[0]+'/Results/output.txt'):
 # except:
 # 	pass
 ## End Delete by Le Huang
+FILE_DIRNAME = os.path.dirname(os.path.realpath(__file__))
+cazy_patterns_dir = os.path.join(FILE_DIRNAME, "CAZY_PPR_patterns")
+parallel_group_many_proteins_many_patterns_noDNA_src = os.path.join(FILE_DIRNAME, "parallel_group_many_proteins_many_patterns_noDNA.py")
+
 for protein_dir_name in organism_array:
 	print("Screening "+protein_dir_name+" for")
 	for cazy_class in cazyme_array:
 		print(cazy_class)
-		peptide_dir_name = hotpep_data_path("CAZY_PPR_patterns", cazy_class)
+		peptide_dir_name = os.path.join(cazy_patterns_dir, cazy_class)
 		variables =  [threads, protein_dir_name, peptide_dir_name, peptide_length, hit_cut_off, freq_cut_off]
-		call("parallel_group_many_proteins_many_patterns_noDNA.py "+" ".join(str(x) for x in variables), shell=True)
+		listed_variables = " ".join([str(x) for x in variables])
+		call("{} {}".format(parallel_group_many_proteins_many_patterns_noDNA_src, listed_variables), shell=True)
 		#call(["add_functions_orf.py", protein_dir_name, peptide_dir_name])
 		var1 = 1
 		while var1 <= threads:
@@ -59,6 +62,7 @@ for protein_dir_name in organism_array:
 			var1 += 1
 
 	if list_multidomain_enzymes == "yes":
-		call("list_multidomain_proteins.py "+protein_dir_name+" "+"_".join(cazyme_array), shell=True)
+		list_multidomain_proteins_src = os.path.join(FILE_DIRNAME, "list_multidomain_proteins.py")
+		call("{} ".format(list_multidomain_proteins_src)+protein_dir_name+" "+"_".join(cazyme_array), shell=True)
 print("\nScreened\n"+"\n".join(organism_array))
 print("for proteins of the types\n"+", ".join(cazyme_array))
