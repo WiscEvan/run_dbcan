@@ -1,0 +1,1 @@
+python run_dbcan.py EscheriaColiK12MG1655.fna prok --out_dir test --db_dir /media/bigdrive1/Databases/dbCAN
